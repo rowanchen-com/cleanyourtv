@@ -46,6 +46,14 @@ jobs:
           sdkmanager "platforms;android-34" "build-tools;34.0.0"
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 
+      - name: Restore persistent test signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.CLEANYOURTV_DEBUG_KEYSTORE }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          mkdir -p "$HOME/.android"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+
       - name: Build APK
         run: |
           chmod +x gradlew
