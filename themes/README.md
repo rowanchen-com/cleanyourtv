@@ -15,7 +15,7 @@ powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost 192.168.1.50 th
 | `default/` | The built-in look written out as JSON, as a starting point for your own |
 | `aurora/` | A dark aurora wallpaper (teal and violet on navy, darker at the bottom) with a matching background colour |
 | `six-columns/` | Six smaller tiles per row and one grid row visible under the dock |
-| `xiaomi-freeguy/` | Device profile for China-market Xiaomi MiTV-MFTR0/freeguy: Xiaomi settings and HDMI entry intents; no visual changes |
+| `xiaomi-freeguy/` | China-market MiTV-MFTR0/freeguy: Xiaomi settings/Wi-Fi, three HDMI ports, AV, TV/ATV and DTMB; regular-launcher apps included |
 
 ## Keys
 
@@ -31,6 +31,7 @@ is ignored, and a file that doesn't parse is ignored as a whole, so a theme can 
 | `input_action` | string | Action sent with an HDMI/AV row's channel URI when nothing handles the standard `VIEW` (XGIMI: `com.xgimi.action.hdmiPlayer`) |
 | `intent_overrides` | object of string values | Activity Intent URIs keyed by `settings`, `wifi`, or an exact TvInputInfo ID; tried before the standard entry, with fallback if unavailable |
 | `hidden_inputs` | list of TvInputInfo IDs | Inputs to omit when a firmware registers ports not present on the physical TV |
+| `input_labels` | object of string values | Display labels keyed by exact TvInputInfo ID, such as `AV` instead of `Composite`; JSON overlay only |
 | `columns` | 1 to 8 | Tiles per row; tiles shrink to fit from 5 up |
 | `rows_below_dock` | 0 to 3 | Grid rows left visible under the dock |
 | `shamsi_date` | bool | Show the Solar Hijri date above the Gregorian one |
@@ -47,10 +48,40 @@ is ignored, and a file that doesn't parse is ignored as a whole, so a theme can 
 integer extras in a profile, not Java code. `hidden_inputs` is an empty string array by default.
 
 The `xiaomi-freeguy` targets were checked on MiTV-MFTR0/freeguy, Android 14,
-`OS3.0.101.0.UFTMATV`: Xiaomi settings resolves to `.entry.MainActivity`; HDMI input values 23/24/25
-create TV sessions on HW5/HW6/HW7 respectively. HW8 is a firmware-registered fourth HDMI input on a
-three-port TV, so the profile hides it. These ADB target checks do not replace testing the launcher
-buttons on the TV. The profile does not change which application owns HOME or disable any packages.
+`OS3.0.101.0.UFTMATV`. The profile uses these entries:
+
+| Entry | Target | Required integer extra |
+|---|---|---|
+| Settings | `com.xiaomi.mitv.settings/.entry.MainActivity` | None |
+| Wi-Fi | `com.xiaomi.mitv.settings/.wifi.MitvWifiActivity` | None |
+| HDMI 1 / HW5 | `com.xiaomi.mitv.tvplayer/.ExternalSourceActivity` | `input=23` |
+| HDMI 2 / HW6 (eARC) | Same external-source activity | `input=24` |
+| HDMI 3 / HW7 | Same external-source activity | `input=25` |
+| AV / HW2 | Same external-source activity | `input=2` |
+| TV/ATV / HW1 | `com.xiaomi.mitv.tvplayer/.AtvActivity` | None |
+| DTMB / HW0 | `com.xiaomi.mitv.tvplayer/.dtmb.DTMBActivity` | None |
+
+The configured Intent URIs contain the vendor actions and correctly typed extras. HW8 is a
+firmware-registered fourth HDMI input on this three-port TV, so the profile hides it. `input_labels`
+renames Composite to AV and names the two tuner entries. An empty `live_tv_package` avoids an
+extra generic Live TV row, and `hidden_apps: []` clears the default app exclusions for this profile.
+
+On the compatibility branch, the app grid combines TV and regular launcher categories, preferring
+one TV entry per package. Both the top Settings button and the app-grid Settings entry use Xiaomi
+settings; a duplicate generic Settings tile is omitted when the Xiaomi entry is listed. Enabled
+apps with regular launcher entries can appear, including the gallery; disabled apps stay excluded.
+
+The top Settings/Wi-Fi buttons, app-grid Xiaomi Settings entry and AV/TV/DTMB menu clicks were
+tested on the TV. Normal activity launches for all six source entries created matching TV input
+sessions. These checks do not verify external HDMI/AV pictures or RF channel reception.
+
+Connection text reflects reported framework states: 0 shows Connected and a green dot, 2 shows
+Not connected, and 1 (Connected standby) hides the text. The existing heuristic also hides HDMI
+state if every listed HDMI port reports 0. The configured tuner rows hide state text. A connected
+soundbar or an available tuner does not establish a playable video signal.
+
+The profile does not change HOME ownership, package enablement or system permissions. The
+documentation intended for upstream is in [the device notes](../examples/xiaomi-s-pro-75-freeguy/debloat.txt).
 
 ## Wallpapers
 
