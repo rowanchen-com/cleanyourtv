@@ -55,6 +55,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         final int kind;
         final String label;
         final ComponentName component;
+        final String launchCategory;
         final String pkg;
         final Drawable banner;
         final Drawable icon;
@@ -68,9 +69,15 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         }
 
         Entry(int kind, String label, ComponentName component, Drawable banner, Drawable icon, String caption, int accent) {
+            this(kind, label, component, banner, icon, caption, accent, Intent.CATEGORY_LEANBACK_LAUNCHER);
+        }
+
+        Entry(int kind, String label, ComponentName component, Drawable banner, Drawable icon, String caption,
+              int accent, String launchCategory) {
             this.kind = kind;
             this.label = label;
             this.component = component;
+            this.launchCategory = launchCategory;
             this.pkg = component.getPackageName();
             this.banner = banner;
             this.icon = icon;
@@ -112,6 +119,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     /** Never shown as tiles (res/values/config.xml, hidden_apps). */
     private final Set<String> hidden;
     private final boolean showHomeSettings;
+    private final ComponentName settingsComponent;
+    private final String settingsOverride;
     private final List<Entry> items = new ArrayList<>();
 
     AppAdapter(Context ctx, TileListener listener, int dockSize, Config cfg) {
@@ -121,6 +130,10 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         this.favourites = cfg.dockApps;
         this.hidden = new HashSet<>(cfg.hiddenApps);
         this.showHomeSettings = cfg.showHomeSettingsShortcut;
+        ResolveInfo settings = ctx.getPackageManager().resolveActivity(new Intent(Settings.ACTION_SETTINGS), 0);
+        this.settingsComponent = settings == null || settings.activityInfo == null ? null
+                : new ComponentName(settings.activityInfo.packageName, settings.activityInfo.name);
+        this.settingsOverride = cfg.intentOverrides.get("settings");
         // Tiles keep their identity across reload(), so a focused tile stays on its app instead of
         // its view being rebound to whatever app now sits in that slot.
         setHasStableIds(true);
@@ -133,24 +146,54 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     void reload(List<Cards.Card> cards) {
         PackageManager pm = ctx.getPackageManager();
         Intent probe = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
-        List<ResolveInfo> found = pm.queryIntentActivities(probe, 0);
+        List<ResolveInfo> found = new ArrayList<>(pm.queryIntentActivities(probe, 0));
+        Set<ComponentName> tvComponents = new HashSet<>();
+        for (ResolveInfo ri : found) {
+            if (ri.activityInfo != null) {
+                tvComponents.add(new ComponentName(ri.activityInfo.packageName, ri.activityInfo.name));
+            }
+        }
+        // China-market TV apps and sideloaded utilities often declare only the regular launcher category.
+        found.addAll(pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER), 0));
+        ComponentName routedSettings = null;
+        if (settingsOverride != null) {
+            try {
+                ComponentName target = Intent.parseUri(settingsOverride, Intent.URI_INTENT_SCHEME).getComponent();
+                for (ResolveInfo ri : found) {
+                    if (ri.activityInfo != null && !hidden.contains(ri.activityInfo.packageName)
+                            && new ComponentName(ri.activityInfo.packageName, ri.activityInfo.name).equals(target)) {
+                        routedSettings = target;
+                        break;
+                    }
+                }
+            } catch (java.net.URISyntaxException ignored) {
+                // Keep the ordinary Settings tile when the configured destination cannot be listed.
+            }
+        }
         Map<String, Cards.Card> cardByPkg = new HashMap<>();
         for (Cards.Card c : cards) cardByPkg.put(c.pkg, c);
         List<Entry> fresh = new ArrayList<>();
+        Set<String> addedPackages = new HashSet<>();
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
             if (pkg.equals(ctx.getPackageName()) || hidden.contains(pkg)) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
+            if (routedSettings != null && component.equals(settingsComponent)
+                    && !component.equals(routedSettings)) continue;
             Cards.Card card = cardByPkg.get(pkg);
             if (card != null && !card.component.equals(component)) continue;   // the card stands in for this tile
+            if (!addedPackages.add(pkg)) continue;   // TV entry wins when both categories exist.
+            String category = tvComponents.contains(component)
+                    ? Intent.CATEGORY_LEANBACK_LAUNCHER : Intent.CATEGORY_LAUNCHER;
             Drawable banner = ri.activityInfo.loadBanner(pm);
             if (banner == null) banner = ri.activityInfo.applicationInfo.loadBanner(pm);
             Drawable icon = ri.loadIcon(pm);
             if (card != null) {
-                fresh.add(new Entry(Entry.CARD, card.label, component, banner, icon, card.caption, card.accent));
+                fresh.add(new Entry(Entry.CARD, card.label, component, banner, icon, card.caption, card.accent, category));
             } else {
-                fresh.add(new Entry(String.valueOf(ri.loadLabel(pm)), component, banner, icon));
+                fresh.add(new Entry(Entry.APP, String.valueOf(ri.loadLabel(pm)), component, banner, icon, null, 0, category));
             }
         }
         Collections.sort(fresh, (a, b) -> {
@@ -239,8 +282,18 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             return;
         }
+        // The grid's system Settings tile uses the same configured destination as the top button.
+        if (e.component.equals(settingsComponent) && settingsOverride != null) {
+            try {
+                ctx.startActivity(Intent.parseUri(settingsOverride, Intent.URI_INTENT_SCHEME)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return;
+            } catch (java.net.URISyntaxException | RuntimeException ex) {
+                android.util.Log.w("TvHome.Apps", "Cannot open configured settings", ex);
+            }
+        }
         Intent i = new Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                .addCategory(e.launchCategory)
                 .setComponent(e.component)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         try {

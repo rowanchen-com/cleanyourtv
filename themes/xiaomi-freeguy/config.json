@@ -1,0 +1,22 @@
+{
+  "hidden_apps": [],
+  "live_tv_package": "",
+  "intent_overrides": {
+    "settings": "intent:#Intent;action=com.xiaomi.mitv.settings.SETTINGS;component=com.xiaomi.mitv.settings/.entry.MainActivity;end",
+    "wifi": "intent:#Intent;action=com.xiaomi.mitv.settings.WIFI_SETTINGS;component=com.xiaomi.mitv.settings/.wifi.MitvWifiActivity;end",
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW5": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.EXTSRC_PLAY;component=com.xiaomi.mitv.tvplayer/.ExternalSourceActivity;i.input=23;end",
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW6": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.EXTSRC_PLAY;component=com.xiaomi.mitv.tvplayer/.ExternalSourceActivity;i.input=24;end",
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW7": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.EXTSRC_PLAY;component=com.xiaomi.mitv.tvplayer/.ExternalSourceActivity;i.input=25;end",
+    "com.mediatek.tvinput/.composite.CompositeInputService/HW2": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.EXTSRC_PLAY;component=com.xiaomi.mitv.tvplayer/.ExternalSourceActivity;i.input=2;end",
+    "com.mediatek.tvinput/.tuner.TunerInputService/HW1": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.ATV_PLAY;component=com.xiaomi.mitv.tvplayer/.AtvActivity;end",
+    "com.mediatek.tvinput/.tuner.TunerInputService/HW0": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.DTMB_PLAY;component=com.xiaomi.mitv.tvplayer/.dtmb.DTMBActivity;end"
+  },
+  "input_labels": {
+    "com.mediatek.tvinput/.composite.CompositeInputService/HW2": "AV",
+    "com.mediatek.tvinput/.tuner.TunerInputService/HW1": "TV / ATV",
+    "com.mediatek.tvinput/.tuner.TunerInputService/HW0": "DTMB"
+  },
+  "hidden_inputs": [
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW8"
+  ]
+}
