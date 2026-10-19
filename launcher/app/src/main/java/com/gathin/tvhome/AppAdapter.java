@@ -112,6 +112,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     /** Never shown as tiles (res/values/config.xml, hidden_apps). */
     private final Set<String> hidden;
     private final boolean showHomeSettings;
+    private final ComponentName settingsComponent;
+    private final String settingsOverride;
     private final List<Entry> items = new ArrayList<>();
 
     AppAdapter(Context ctx, TileListener listener, int dockSize, Config cfg) {
@@ -121,6 +123,10 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         this.favourites = cfg.dockApps;
         this.hidden = new HashSet<>(cfg.hiddenApps);
         this.showHomeSettings = cfg.showHomeSettingsShortcut;
+        ResolveInfo settings = ctx.getPackageManager().resolveActivity(new Intent(Settings.ACTION_SETTINGS), 0);
+        this.settingsComponent = settings == null || settings.activityInfo == null ? null
+                : new ComponentName(settings.activityInfo.packageName, settings.activityInfo.name);
+        this.settingsOverride = cfg.intentOverrides.get("settings");
         // Tiles keep their identity across reload(), so a focused tile stays on its app instead of
         // its view being rebound to whatever app now sits in that slot.
         setHasStableIds(true);
@@ -238,6 +244,16 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             ctx.startActivity(new Intent(ctx, HomeSettingsActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             return;
+        }
+        // The grid's system Settings tile uses the same configured destination as the top button.
+        if (e.component.equals(settingsComponent) && settingsOverride != null) {
+            try {
+                ctx.startActivity(Intent.parseUri(settingsOverride, Intent.URI_INTENT_SCHEME)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return;
+            } catch (java.net.URISyntaxException | RuntimeException ex) {
+                android.util.Log.w("TvHome.Apps", "Cannot open configured settings", ex);
+            }
         }
         Intent i = new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)

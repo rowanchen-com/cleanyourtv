@@ -78,6 +78,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private String sourcePanelService;
     private String sourcePanelAction;
     private Map<String, String> intentOverrides = Collections.emptyMap();
+    private Map<String, String> inputLabels = Collections.emptyMap();
     private Set<String> hiddenInputs = Collections.emptySet();
 
     private AppAdapter adapter;
@@ -190,6 +191,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sourcePanelService = cfg.sourcePanelService;
         sourcePanelAction = cfg.sourcePanelAction;
         intentOverrides = cfg.intentOverrides;
+        inputLabels = cfg.inputLabels;
         hiddenInputs = new HashSet<>(cfg.hiddenInputs);
 
         root = findViewById(R.id.root);
@@ -833,16 +835,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         tunerIsHw = hw;
                     }
                 }
-                if (!info.isPassthroughInput()) continue;
+                boolean configuredTuner = info.getType() == TvInputInfo.TYPE_TUNER
+                        && intentOverrides.containsKey(info.getId());
+                if (!info.isPassthroughInput() && !configuredTuner) continue;
                 CharSequence l = info.loadLabel(this);
-                String label = l == null ? info.getId() : l.toString();
+                String label = inputLabels.getOrDefault(info.getId(), l == null ? info.getId() : l.toString());
                 boolean hdmi = info.getType() == TvInputInfo.TYPE_HDMI;
                 if (hdmi && !label.toUpperCase(Locale.ROOT).contains("HDMI")) label = "HDMI " + label;
                 final String id = info.getId();
-                int state = hdmi && hdmiStateBogus ? -1 : tim.getInputState(id);
+                int state = configuredTuner || (hdmi && hdmiStateBogus) ? -1 : tim.getInputState(id);
                 if (!hdmi && rows.getChildCount() > 0 && !sawNonHdmi) addSeparator(rows);
                 if (!hdmi) sawNonHdmi = true;
-                addInputRow(rows, popup, hdmi ? R.drawable.ic_input : R.drawable.ic_av, label, state,
+                int icon = configuredTuner ? R.drawable.ic_livetv : hdmi ? R.drawable.ic_input : R.drawable.ic_av;
+                addInputRow(rows, popup, icon, label, state,
                         () -> openInput(id));
             }
         }
