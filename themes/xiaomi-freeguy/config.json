@@ -1,4 +1,5 @@
 {
+  "hidden_apps": [],
   "live_tv_package": "",
   "intent_overrides": {
     "settings": "intent:#Intent;action=com.xiaomi.mitv.settings.SETTINGS;component=com.xiaomi.mitv.settings/.entry.MainActivity;end",
