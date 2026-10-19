@@ -77,8 +77,8 @@ sessions. These checks do not verify external HDMI/AV pictures or RF channel rec
 
 Connection text reflects reported framework states: 0 shows Connected and a green dot, 2 shows
 Not connected, and 1 (Connected standby) hides the text. The existing heuristic also hides HDMI
-state if every listed HDMI port reports 0. The configured tuner rows hide state text. A connected
-soundbar or an available tuner does not establish a playable video signal.
+state if every listed HDMI port reports 0. The configured tuner rows hide state text.
+HDMI2/eARC can legitimately show Connected when a soundbar is attached, including audio-only use.
 
 The profile does not change HOME ownership, package enablement or system permissions. The
 documentation intended for upstream is in [the device notes](../examples/xiaomi-s-pro-75-freeguy/debloat.txt).
