@@ -40,6 +40,13 @@
          (XGIMI projectors: com.xgimi.action.hdmiPlayer). Leave empty to omit. -->
     <string name="input_action" translatable="false"></string>
 
+    <!-- Optional activity Intent URIs. Each entry is key|intent:#Intent;...;end.
+         Keys: settings, wifi, or an exact TvInputInfo ID. Empty keeps standard Android routing. -->
+    <string-array name="intent_overrides" />
+
+    <!-- Exact TvInputInfo IDs to hide when a firmware registers ports absent from the hardware. -->
+    <string-array name="hidden_inputs" />
+
     <!-- Show the Solar Hijri (Shamsi) date used in Iran and Afghanistan, e.g. "27 Mehr 1405", above the
          Gregorian date. -->
     <bool name="shamsi_date">false</bool>

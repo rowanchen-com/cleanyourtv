@@ -15,6 +15,7 @@ powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost 192.168.1.50 th
 | `default/` | The built-in look written out as JSON, as a starting point for your own |
 | `aurora/` | A dark aurora wallpaper (teal and violet on navy, darker at the bottom) with a matching background colour |
 | `six-columns/` | Six smaller tiles per row and one grid row visible under the dock |
+| `xiaomi-freeguy/` | Device profile for China-market Xiaomi MiTV-MFTR0/freeguy: Xiaomi settings and HDMI entry intents; no visual changes |
 
 ## Keys
 
@@ -28,6 +29,8 @@ is ignored, and a file that doesn't parse is ignored as a whole, so a theme can 
 | `live_tv_package`, `live_tv_action` | string | The Live TV app and, if it has no leanback entry, the action to start it with |
 | `source_panel_service`, `source_panel_action` | string | The TV's own source panel, for sets with no TvInputManager |
 | `input_action` | string | Action sent with an HDMI/AV row's channel URI when nothing handles the standard `VIEW` (XGIMI: `com.xgimi.action.hdmiPlayer`) |
+| `intent_overrides` | object of string values | Activity Intent URIs keyed by `settings`, `wifi`, or an exact TvInputInfo ID; tried before the standard entry, with fallback if unavailable |
+| `hidden_inputs` | list of TvInputInfo IDs | Inputs to omit when a firmware registers ports not present on the physical TV |
 | `columns` | 1 to 8 | Tiles per row; tiles shrink to fit from 5 up |
 | `rows_below_dock` | 0 to 3 | Grid rows left visible under the dock |
 | `shamsi_date` | bool | Show the Solar Hijri date above the Gregorian one |
@@ -36,6 +39,18 @@ is ignored, and a file that doesn't parse is ignored as a whole, so a theme can 
 | `show_home_settings_shortcut` | bool | The "Default home" tile, where the TV has a home picker |
 | `background_color` | `#RRGGBB` | Colour behind everything; black by default |
 | `wallpaper` | bool | Show `wallpaper.jpg` from the theme folder (`true`), or ignore it (`false`) |
+
+## Device entry profiles
+
+`intent_overrides` also has a built-in `config.xml` form: a string array whose entries are
+`key|intent:#Intent;...;end`. It is empty by default. Keep manufacturer-specific component names and
+integer extras in a profile, not Java code. `hidden_inputs` is an empty string array by default.
+
+The `xiaomi-freeguy` targets were checked on MiTV-MFTR0/freeguy, Android 14,
+`OS3.0.101.0.UFTMATV`: Xiaomi settings resolves to `.entry.MainActivity`; HDMI input values 23/24/25
+create TV sessions on HW5/HW6/HW7 respectively. HW8 is a firmware-registered fourth HDMI input on a
+three-port TV, so the profile hides it. These ADB target checks do not replace testing the launcher
+buttons on the TV. The profile does not change which application owns HOME or disable any packages.
 
 ## Wallpapers
 

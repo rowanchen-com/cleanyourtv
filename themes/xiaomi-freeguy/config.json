@@ -1,0 +1,12 @@
+{
+  "intent_overrides": {
+    "settings": "intent:#Intent;action=com.xiaomi.mitv.settings.SETTINGS;component=com.xiaomi.mitv.settings/.entry.MainActivity;end",
+    "wifi": "intent:#Intent;action=com.xiaomi.mitv.settings.WIFI_SETTINGS;component=com.xiaomi.mitv.settings/.wifi.MitvWifiActivity;end",
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW5": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.EXTSRC_PLAY;component=com.xiaomi.mitv.tvplayer/.ExternalSourceActivity;i.input=23;end",
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW6": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.EXTSRC_PLAY;component=com.xiaomi.mitv.tvplayer/.ExternalSourceActivity;i.input=24;end",
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW7": "intent:#Intent;action=com.xiaomi.mitv.tvplayer.EXTSRC_PLAY;component=com.xiaomi.mitv.tvplayer/.ExternalSourceActivity;i.input=25;end"
+  },
+  "hidden_inputs": [
+    "com.mediatek.tvinput/.hdmi.HDMIInputService/HW8"
+  ]
+}

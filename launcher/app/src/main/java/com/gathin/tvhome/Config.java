@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * The launcher's settings: the values in res/values/config.xml, with an optional overlay read from
@@ -38,6 +40,8 @@ final class Config {
     final String sourcePanelService;
     final String sourcePanelAction;
     final String inputAction;
+    final Map<String, String> intentOverrides;
+    final List<String> hiddenInputs;
     final int columns;
     final int rowsBelowDock;
     final boolean shamsiDate;
@@ -53,6 +57,7 @@ final class Config {
 
     private Config(List<String> dockApps, List<String> hiddenApps, String liveTvPackage, String liveTvAction,
                    String sourcePanelService, String sourcePanelAction, String inputAction,
+                   Map<String, String> intentOverrides, List<String> hiddenInputs,
                    int columns, int rowsBelowDock,
                    boolean shamsiDate, boolean moduleCards, String vpnApp, boolean showHomeSettingsShortcut, int backgroundColor,
                    File wallpaper, boolean overlayApplied) {
@@ -63,6 +68,8 @@ final class Config {
         this.sourcePanelService = sourcePanelService;
         this.sourcePanelAction = sourcePanelAction;
         this.inputAction = inputAction;
+        this.intentOverrides = Collections.unmodifiableMap(new LinkedHashMap<>(intentOverrides));
+        this.hiddenInputs = Collections.unmodifiableList(new ArrayList<>(hiddenInputs));
         this.columns = columns;
         this.rowsBelowDock = rowsBelowDock;
         this.shamsiDate = shamsiDate;
@@ -88,6 +95,16 @@ final class Config {
         String panelService = res.getString(R.string.source_panel_service).trim();
         String panelAction = res.getString(R.string.source_panel_action).trim();
         String inputAction = res.getString(R.string.input_action).trim();
+        Map<String, String> overrides = new LinkedHashMap<>();
+        for (String entry : res.getStringArray(R.array.intent_overrides)) {
+            int separator = entry.indexOf('|');
+            if (separator > 0) {
+                String key = entry.substring(0, separator).trim();
+                String value = entry.substring(separator + 1).trim();
+                if (!value.isEmpty()) overrides.put(key, value);
+            }
+        }
+        List<String> hiddenInputs = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.hidden_inputs)));
         int columns = res.getInteger(R.integer.columns);
         int rowsBelow = res.getInteger(R.integer.rows_below_dock);
         boolean shamsi = res.getBoolean(R.bool.shamsi_date);
@@ -109,6 +126,20 @@ final class Config {
             panelService = string(json, "source_panel_service", panelService);
             panelAction = string(json, "source_panel_action", panelAction);
             inputAction = string(json, "input_action", inputAction);
+            hiddenInputs = stringList(json, "hidden_inputs", hiddenInputs);
+            Object configuredIntents = json.opt("intent_overrides");
+            if (configuredIntents instanceof JSONObject) {
+                JSONObject values = (JSONObject) configuredIntents;
+                java.util.Iterator<String> keys = values.keys();
+                while (keys.hasNext()) {
+                    String key = keys.next();
+                    Object value = values.opt(key);
+                    if (value instanceof String && !key.trim().isEmpty()
+                            && !((String) value).trim().isEmpty()) {
+                        overrides.put(key.trim(), ((String) value).trim());
+                    }
+                }
+            }
             columns = integer(json, "columns", columns, 1, 8);
             rowsBelow = integer(json, "rows_below_dock", rowsBelow, 0, 3);
             shamsi = bool(json, "shamsi_date", shamsi);
@@ -123,6 +154,7 @@ final class Config {
         if (json != null && json.has("wallpaper") && !bool(json, "wallpaper", true)) wallpaper = null;
 
         return new Config(dock, hidden, liveTv, liveTvAction, panelService, panelAction, inputAction,
+                overrides, hiddenInputs,
                 Math.max(1, columns), Math.max(0, rowsBelow), shamsi, moduleCards, vpn, homeSettings, background,
                 wallpaper, applied);
     }

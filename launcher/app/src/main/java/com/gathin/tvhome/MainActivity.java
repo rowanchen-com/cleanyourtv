@@ -61,6 +61,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -76,6 +77,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private String inputAction;
     private String sourcePanelService;
     private String sourcePanelAction;
+    private Map<String, String> intentOverrides = Collections.emptyMap();
+    private Set<String> hiddenInputs = Collections.emptySet();
 
     private AppAdapter adapter;
     private RecyclerView grid;
@@ -186,6 +189,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         inputAction = cfg.inputAction;
         sourcePanelService = cfg.sourcePanelService;
         sourcePanelAction = cfg.sourcePanelAction;
+        intentOverrides = cfg.intentOverrides;
+        hiddenInputs = new HashSet<>(cfg.hiddenInputs);
 
         root = findViewById(R.id.root);
         root.setBackgroundColor(cfg.backgroundColor);
@@ -272,10 +277,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnInputs.setOnClickListener(v -> showInputs());
         btnWifi.setOnClickListener(v -> openNetworkPill());
         btnWifi.setOnLongClickListener(v -> {
-            open(new Intent(Settings.ACTION_WIFI_SETTINGS));
+            openWifiSettings();
             return true;
         });
-        btnSettings.setOnClickListener(v -> open(new Intent(Settings.ACTION_SETTINGS)));
+        btnSettings.setOnClickListener(v -> {
+            if (!openOverride("settings")) open(new Intent(Settings.ACTION_SETTINGS));
+        });
         btnSettings.setOnLongClickListener(v -> {
             if (!moduleCards) return false;   // off: a long press does nothing, as before the feature
             showModuleCards();
@@ -694,7 +701,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void openNetworkPill() {
         Intent i = vpnApp.isEmpty() ? null : getPackageManager().getLeanbackLaunchIntentForPackage(vpnApp);
         if (i == null && !vpnApp.isEmpty()) i = getPackageManager().getLaunchIntentForPackage(vpnApp);
-        open(i != null ? i : new Intent(Settings.ACTION_WIFI_SETTINGS));
+        if (i != null) open(i);
+        else openWifiSettings();
+    }
+
+    private void openWifiSettings() {
+        if (!openOverride("wifi")) open(new Intent(Settings.ACTION_WIFI_SETTINGS));
+    }
+
+    /** Optional device-specific activities, kept in configuration rather than manufacturer checks. */
+    private boolean openOverride(String key) {
+        String uri = intentOverrides.get(key);
+        if (uri == null) return false;
+        try {
+            Intent intent = Intent.parseUri(uri, Intent.URI_INTENT_SCHEME);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            return true;
+        } catch (java.net.URISyntaxException | RuntimeException e) {
+            android.util.Log.w("TvHome", "Configured activity unavailable for " + key, e);
+            return false;
+        }
     }
 
     /** Hides the Inputs pill when it would have nothing to list: streaming boxes have no HDMI-in, AV or tuner. */
@@ -703,6 +730,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (!any && tim != null) {
             for (TvInputInfo info : tim.getTvInputList()) {
+                if (hiddenInputs.contains(info.getId())) continue;
                 if (info.isPassthroughInput()) {
                     any = true;
                     break;
@@ -746,6 +774,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      *  which the Live TV app handles; where nothing takes that, the configured `input_action` is sent
      *  with the same URI instead (XGIMI's HDMI player only answers com.xgimi.action.hdmiPlayer). */
     private void openInput(String inputId) {
+        if (openOverride(inputId)) return;
         Uri uri = TvContract.buildChannelUriForPassthroughInput(inputId);
         Intent view = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "vnd.android.cursor.item/channel")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -777,6 +806,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean tunerIsHw = false;
         if (tim != null) {
             List<TvInputInfo> inputs = new ArrayList<>(tim.getTvInputList());
+            inputs.removeIf(info -> hiddenInputs.contains(info.getId()));
             // HDMI ports first in port order, then AV and the rest.
             Collections.sort(inputs, (a, b) -> {
                 boolean ha = a.getType() == TvInputInfo.TYPE_HDMI, hb = b.getType() == TvInputInfo.TYPE_HDMI;
